@@ -1,0 +1,59 @@
+{
+    "name": "maxi-format/maxi",
+    "description": "PHP library for parsing and dumping MAXI schema",
+    "license": "MIT",
+    "version": "0.1.0",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Max Beckers",
+            "email": "beckers.maximilian@gmail.com",
+            "role": "Maintainer"
+        }
+    ],
+    "require": {
+        "php": ">=8.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10",
+        "maxi-format/maxi-testdata": "0.2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Maxi\\": "src/"
+        },
+        "files": [
+            "src/Api/ParseMaxi.php",
+            "src/Api/DumpMaxi.php",
+            "src/Api/HydrateMaxi.php",
+            "src/Api/StreamMaxi.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Maxi\\Tests\\": "tests/"
+        }
+    },
+    "repositories": [
+        {
+            "type": "package",
+            "package": {
+                "name": "maxi-format/maxi-testdata",
+                "version": "0.2.0",
+                "source": {
+                    "type": "git",
+                    "url": "https://github.com/maxi-format/maxi-testdata.git",
+                    "reference": "0.2.0"
+                }
+            }
+        }
+    ],
+    "scripts": {
+        "test": "phpunit --testsuite Unit,Testdata",
+        "bench": "phpunit --testsuite Performance --testdox"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
+
