@@ -1,7 +1,5 @@
 # maxi-php
 
-[![CI](https://github.com/maxi-format/maxi-php/actions/workflows/ci.yml/badge.svg)](https://github.com/maxi-format/maxi-php/actions/workflows/ci.yml)
-
 PHP 8.0+ library for parsing and dumping **MAXI schema + records**.
 
 Version: `0.1.0`
