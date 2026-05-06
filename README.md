@@ -201,7 +201,7 @@ All parse/dump errors throw `Maxi\Core\MaxiException` which carries structured c
 use Maxi\Core\MaxiException;
 
 try {
-    Maxi::parse($input, ['mode' => 'strict']);
+    Maxi::parse($input, ['allowTypeCoercion' => 'error']);
 } catch (MaxiException $e) {
     echo $e->errorCode;     // e.g. 'E007'
     echo $e->maxi_line;     // line number where the error occurred
@@ -232,23 +232,32 @@ try {
 | E017 | UnsupportedBinaryFormatError | Invalid bytes annotation         |
 | E018 | InvalidDefaultValueError     | Default value type mismatch      |
 
-### Lax vs Strict mode
+### Parser behavior options
 
-By default the parser runs in **lax** mode — type mismatches, missing fields, and
-unresolved references generate warnings instead of exceptions:
+By default the parser **warns** on type mismatches, missing fields, and constraint violations instead of throwing. Tune this per option:
 
 ```php
-$result = Maxi::parse($input); // lax (default)
+// Warn on type mismatches (default)
+$result = Maxi::parse($input);
 
 foreach ($result->warnings as $w) {
     echo "[{$w->code}] {$w->message} (line {$w->line})\n";
 }
 ```
 
-In **strict** mode all issues become fatal:
+To make any of these fatal, set the relevant option to `'error'`:
 
 ```php
-$result = Maxi::parse($input, ['mode' => 'strict']);
+// Throw on type mismatches
+$result = Maxi::parse($input, ['allowTypeCoercion' => 'error']);
+
+// Throw on any schema violation
+$result = Maxi::parse($input, [
+    'allowTypeCoercion'         => 'error',
+    'allowMissingFields'        => 'error',
+    'allowAdditionalFields'     => 'error',
+    'allowConstraintViolations' => 'error',
+]);
 ```
 
 ## External schema imports
