@@ -9,9 +9,9 @@ class MaxiException extends \RuntimeException
     public function __construct(
         string                  $message,
         public readonly string  $errorCode,
-        public readonly ?int    $maxi_line = null,
-        public readonly ?int    $maxi_column = null,
-        public readonly ?string $maxi_filename = null,
+        public readonly ?int    $maxiLine = null,
+        public readonly ?int    $maxiColumn = null,
+        public readonly ?string $maxiFilename = null,
         ?\Throwable             $previous = null,
     ) {
         parent::__construct($message, 0, $previous);
@@ -19,10 +19,10 @@ class MaxiException extends \RuntimeException
 
     public function __toString(): string
     {
-        $loc = $this->maxi_line !== null
-            ? ' at line ' . $this->maxi_line . ($this->maxi_column !== null ? ', column ' . $this->maxi_column : '')
+        $loc = $this->maxiLine !== null
+            ? ' at line ' . $this->maxiLine . ($this->maxiColumn !== null ? ', column ' . $this->maxiColumn : '')
             : '';
-        $file = $this->maxi_filename !== null ? ' in ' . $this->maxi_filename : '';
+        $file = $this->maxiFilename !== null ? ' in ' . $this->maxiFilename : '';
 
         return 'MaxiException [' . $this->errorCode . ']' . $file . $loc . ': ' . $this->message;
     }

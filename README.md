@@ -203,10 +203,10 @@ use Maxi\Core\MaxiException;
 try {
     Maxi::parse($input, ['allowTypeCoercion' => 'error']);
 } catch (MaxiException $e) {
-    echo $e->errorCode;     // e.g. 'E007'
-    echo $e->maxi_line;     // line number where the error occurred
-    echo $e->maxi_filename; // filename (if provided via options)
-    echo $e->getMessage();  // human-readable description
+    echo $e->errorCode;    // e.g. 'E007'
+    echo $e->maxiLine;     // line number where the error occurred
+    echo $e->maxiFilename; // filename (if provided via options)
+    echo $e->getMessage(); // human-readable description
 }
 ```
 
@@ -231,6 +231,8 @@ try {
 | E016 | DuplicateIdentifierError     | Duplicate id in records          |
 | E017 | UnsupportedBinaryFormatError | Invalid bytes annotation         |
 | E018 | InvalidDefaultValueError     | Default value type mismatch      |
+| E019 | StreamError                  | Error during streaming parse     |
+| E020 | SchemaLoadError              | Error loading external schema    |
 
 ### Parser behavior options
 
@@ -277,8 +279,8 @@ $result = Maxi::parse($input, [
 
 ```
 U:User(id:int|name|email=unknown)   ← type definition
-###                                  ← section separator
-U(1|Julie|~)                         ← record  (~ = explicit null)
+###                                 ← section separator
+U(1|Julie|~)                        ← record  (~ = explicit null)
 ```
 
 - Omitted trailing fields use their declared default value.
