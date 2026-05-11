@@ -6,28 +6,31 @@ on:
       - main
   release:
     types: [published]
-  create:
-    tags:
-      - '*'
 
 jobs:
   update-packagist:
     runs-on: ubuntu-latest
-    name: Notify Packagist of Update
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Validate composer.json
+      - name: Notify Packagist
         run: |
-          if [ ! -f composer.json ]; then
-            echo "composer.json not found!"
+          response=$(curl -s -o /tmp/response.txt -w "%{http_code}" \
+            -XPOST \
+            -H "Content-Type: application/json" \
+            "https://packagist.org/api/github?username=${{ secrets.PACKAGIST_USERNAME }}&apiToken=${{ secrets.PACKAGIST_TOKEN }}" \
+            -d '{
+              "repository": {
+                "url": "https://github.com/maxi-format/maxi-php",
+                "name": "maxi-format/maxi-php"
+              }
+            }')
+
+          echo "HTTP Status: $response"
+          cat /tmp/response.txt
+
+          if [ "$response" -ne 202 ] && [ "$response" -ne 200 ]; then
+            echo "❌ Failed to notify Packagist"
             exit 1
           fi
 
-      - name: Notify Packagist
-        run: |
-          curl -XPOST -H 'content-type:application/json' \
-            "https://packagist.org/api/update-packages?username=${{ secrets.PACKAGIST_USERNAME }}&apiToken=${{ secrets.PACKAGIST_TOKEN }}" \
-            -d '{"repository":{"url":"https://github.com/${{ github.repository }}"}}'
+          echo "✅ Packagist notified!"
