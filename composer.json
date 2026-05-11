@@ -15,8 +15,9 @@
         "php": ">=8.0"
     },
     "require-dev": {
-        "phpunit/phpunit": "^10",
-        "maxi-format/maxi-testdata": "0.2.0"
+        "maxi-format/maxi-testdata": "0.2.0",
+        "phpstan/phpstan": "^2.1",
+        "phpunit/phpunit": "^10"
     },
     "autoload": {
         "psr-4": {
@@ -50,10 +51,10 @@
     ],
     "scripts": {
         "test": "phpunit --testsuite Unit,Testdata",
-        "bench": "phpunit --testsuite Performance --testdox"
+        "bench": "phpunit --testsuite Performance --testdox",
+        "analyse": "phpstan analyse --memory-limit=512M"
     },
     "config": {
         "sort-packages": true
     }
 }
-

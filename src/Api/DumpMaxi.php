@@ -27,6 +27,7 @@ use Maxi\Core\ParsedConstraint;
  *   types            array  – type descriptors for plain-array input
  *   defaultAlias     string – alias used when $data is a flat list/object
  *   collectReferences bool  – auto-collect nested referenced objects (default true)
+ * @param array<string,mixed> $options
  */
 function dumpMaxi(mixed $data, array $options = []): string
 {
@@ -57,6 +58,9 @@ function dumpMaxi(mixed $data, array $options = []): string
     return dumpFromObjects($dataMap, $options);
 }
 
+/**
+ * @param array<string,mixed> $options
+ */
 function dumpFromParseResult(MaxiParseResult $result, array $options): string
 {
     $multiline = $options['multiline'] ?? false;
@@ -92,6 +96,7 @@ function dumpFromParseResult(MaxiParseResult $result, array $options): string
 
 /**
  * @param array<string, list<array<string,mixed>>> $dataMap
+ * @param array<string,mixed> $options
  */
 function dumpFromObjects(array $dataMap, array $options): string
 {
@@ -140,7 +145,7 @@ function dumpFromObjects(array $dataMap, array $options): string
     foreach ($recordsToDump as $alias => $rows) {
         $t = $types[$alias] ?? null;
         if (!$multiline && $t !== null && !$collectRefs) {
-            $fields = $t['fields'] ?? [];
+            $fields = $t['fields'];
             $fieldCount = count($fields);
             foreach ($rows as $obj) {
                 $vals = [];
@@ -197,7 +202,7 @@ function dumpFromObjects(array $dataMap, array $options): string
 
 /**
  * @param mixed $typesOption array of type descriptors or MaxiTypeDef objects
- * @return array<string, array{alias:string,name:string|null,parents:string[],fields:array}>
+ * @return array<string, array{alias:string,name:string|null,parents:string[],fields:array<int,array<string,mixed>>}>
  */
 function normalizeTypesOption(mixed $typesOption): array
 {
@@ -236,7 +241,7 @@ function normalizeTypesOption(mixed $typesOption): array
 }
 
 /**
- * @param array<string, array{alias:string,name:string|null,parents:string[],fields:array}> $types
+ * @param array<string, array{alias:string,name:string|null,parents:string[],fields:array<int,array<string,mixed>>}> $types
  */
 function resolveInheritanceForDump(array &$types): void
 {
@@ -281,8 +286,9 @@ function resolveInheritanceForDump(array &$types): void
 }
 
 /**
- * @param array<string,array> $types
- * @param array<string,list<array<string,mixed>>> $recordsToDump
+ * @param array<string,array<string,mixed>> $types
+ * @param array<string,array<array<string,mixed>>> $recordsToDump
+ * @param \SplObjectStorage<object,null> $seenObjects
  */
 function collectReferencedObjectsIterative(
     array             $types,
@@ -367,7 +373,10 @@ function dumpTypeDef(MaxiTypeDef $td, bool $multiline): string
     return "{$header}{$parents}(\n{$body}\n)";
 }
 
-/** Dump a plain type-info array (from dumpFromObjects). */
+/**
+ * Dump a plain type-info array (from dumpFromObjects).
+ * @param array<string,mixed> $t
+ */
 function dumpTypeInfo(array $t, bool $multiline): string
 {
     $alias = $t['alias'];
@@ -443,7 +452,9 @@ function dumpFieldDef(MaxiFieldDef $field): string
     return $result;
 }
 
-/** Dump a field from a plain-array descriptor. */
+/** Dump a field from a plain-array descriptor.
+ * @param array<string,mixed> $field
+ */
 function dumpFieldArray(array $field): string
 {
     $name = $field['name'];
@@ -514,14 +525,15 @@ function dumpConstraintObj(ParsedConstraint $c): string
         'required' => '!',
         'id' => 'id',
         'comparison' => ($v['operator'] ?? '') . ($v['value'] ?? ''),
-        'pattern' => 'pattern:' . (string)$v,
+        'pattern' => 'pattern:' . (is_array($v) ? implode(',', $v) : (string)$v),
         'mime' => is_array($v) && count($v) > 1
             ? 'mime:[' . implode(',', $v) . ']'
             : 'mime:' . (is_array($v) ? ($v[0] ?? '') : (string)$v),
-        'decimal-precision' => is_array($v) ? ($v['raw'] ?? (string)$v) : (string)$v,
+        'decimal-precision' => is_array($v) ? ($v['raw'] ?? implode('.', $v)) : (string)$v,
         'exact-length' => '=' . (string)$v,
         default => '',
     };
+
 }
 
 /** Dump a raw constraint array (from plain-array type descriptors). */
@@ -540,13 +552,13 @@ function dumpConstraintRaw(mixed $c): string
     return match ($type) {
         'required' => '!',
         'id' => 'id',
-        'comparison' => ($c['operator'] ?? $v['operator'] ?? '') . ($v['value'] ?? $v ?? ''),
-        'pattern' => 'pattern:' . (string)$v,
+        'comparison' => ($c['operator'] ?? (is_array($v) ? ($v['operator'] ?? '') : '')) . (is_array($v) ? ($v['value'] ?? '') : ($v ?? '')),
+        'pattern' => 'pattern:' . (is_array($v) ? implode(',', $v) : (string)$v),
         'mime' => is_array($v) && count($v) > 1
             ? 'mime:[' . implode(',', $v) . ']'
             : 'mime:' . (is_array($v) ? ($v[0] ?? '') : (string)$v),
-        'decimal-precision' => is_array($v) ? ($v['raw'] ?? (string)$v) : (string)$v,
-        'exact-length' => '=' . (string)$v,
+        'decimal-precision' => is_array($v) ? ($v['raw'] ?? implode('.', $v)) : (string)$v,
+        'exact-length' => '=' . (is_array($v) ? implode('', $v) : (string)$v),
         default => '',
     };
 }
@@ -564,7 +576,12 @@ function dumpRecord(MaxiRecord $record, bool $multiline): string
     return "{$record->alias}(\n{$body}\n)";
 }
 
-/** Dump an object (array) as a MAXI record line using a plain-array type descriptor. */
+/** Dump an object (array) as a MAXI record line using a plain-array type descriptor.
+ * @param array<string,mixed> $obj
+ * @param array<string,mixed>|null $typeDef
+ * @param array<string,array<string,mixed>> $allTypes
+ * @param array<string,mixed> $options
+ */
 function dumpObjectAsRecord(
     string $alias,
     array  $obj,
@@ -613,8 +630,9 @@ function dumpObjectAsRecord(
  * Serialise a single PHP value to its MAXI string representation.
  *
  * @param mixed $value
- * @param array|null $fieldInfo plain array descriptor (from dumpFromObjects) or null
- * @param array<string,array> $allTypes
+ * @param array<string,mixed>|null $fieldInfo plain array descriptor (from dumpFromObjects) or null
+ * @param array<string,array<string,mixed>> $allTypes
+ * @param array<string,mixed> $options
  */
 function dumpValue(mixed $value, mixed $fieldInfo, array $allTypes, array $options): string
 {
@@ -687,6 +705,12 @@ function dumpValue(mixed $value, mixed $fieldInfo, array $allTypes, array $optio
     return (string)$value;
 }
 
+/**
+ * @param array<string,mixed> $obj
+ * @param array<string,mixed> $typeDef
+ * @param array<string,array<string,mixed>> $allTypes
+ * @param array<string,mixed> $options
+ */
 function dumpInlineObject(array $obj, array $typeDef, array $allTypes, array $options): string
 {
     $fields = $typeDef['fields'] ?? [];

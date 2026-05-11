@@ -66,6 +66,7 @@ final class Maxi
      *     defaultAlias?:     string|null,
      *     collectReferences?:bool,
      * } $options
+     * @phpstan-param array<string,mixed> $options
      */
     public static function dump(mixed $data, array $options = []): string
     {
@@ -95,7 +96,7 @@ final class Maxi
      *
      * @param string $input MAXI text
      * @param array<string,class-string> $classMap alias → FQCN (e.g. ['U' => User::class])
-     * @param array $options Same options as parse()
+     * @param array<string,mixed> $options Same options as parse()
      */
     public static function parseAs(string $input, array $classMap, array $options = []): MaxiHydrateResult
     {
@@ -109,7 +110,7 @@ final class Maxi
      *
      * @param string $input MAXI text
      * @param class-string[] $classes e.g. [User::class, Order::class]
-     * @param array $options Same options as parse()
+     * @param array<string,mixed> $options Same options as parse()
      */
     public static function parseAutoAs(string $input, array $classes, array $options = []): MaxiHydrateResult
     {
@@ -122,7 +123,7 @@ final class Maxi
      * or static $maxiSchema on each object's class.
      *
      * @param object[] $objects Instances to serialize
-     * @param array $options Same options as dump()
+     * @param array<string,mixed> $options Same options as dump()
      */
     public static function dumpAuto(array $objects, array $options = []): string
     {

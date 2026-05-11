@@ -145,6 +145,7 @@ final class MaxiSchemaRegistry
     /**
      * Build a descriptor array from a class reflection + MaxiType attribute.
      *
+     * @param \ReflectionClass<object> $ref
      * @return array<string,mixed>
      */
     private static function buildDescriptor(\ReflectionClass $ref, MaxiTypeAttr $typeAttr): array

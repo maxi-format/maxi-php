@@ -171,6 +171,7 @@ class ReferenceResolver
      *
      * @param array<string, array<string, array<string, mixed>>> $registry
      *        Output of buildObjectRegistry().
+     * @param array<string, mixed> $options
      */
     public static function validateReferences(
         MaxiParseResult $result,
@@ -253,7 +254,7 @@ class ReferenceResolver
             return $t;
         }
 
-        return ($schema->nameToAlias ?? [])[$t] ?? null;
+        return ($schema->nameToAlias)[$t] ?? null;
     }
 }
 

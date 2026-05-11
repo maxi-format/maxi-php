@@ -117,6 +117,7 @@ function streamMaxi(mixed $input, array $options = []): MaxiStreamResult
 }
 
 /**
+ * @param array<string,mixed> $options
  * @return \Generator<int, MaxiRecord>
  */
 function generateRecords(string $recordsText, MaxiParseResult $result, array $options): \Generator

@@ -22,6 +22,10 @@ class MaxiTypeDef
     private ?array $enumValues = null;
     private bool $hasRuntimeConstraints = false;
 
+    /**
+     * @param string[]        $parents
+     * @param MaxiFieldDef[]  $fields
+     */
     public function __construct(
         public readonly string  $alias,
         public readonly ?string $name = null,

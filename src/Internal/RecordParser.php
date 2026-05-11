@@ -36,8 +36,9 @@ class RecordParser
     public function __construct(
         private readonly string          $recordsText,
         private readonly MaxiParseResult $result,
-        private readonly array           $options = [],
-    ) {
+        array                            $options = [],
+    )
+    {
         $this->filename = $options['filename'] ?? null;
         $this->allowConstraintViolations = $options['allowConstraintViolations'] ?? 'warning';
         $this->allowMissingFields = $options['allowMissingFields'] ?? 'null';
@@ -276,8 +277,7 @@ class RecordParser
                 || $this->allowAdditionalFields !== 'ignore'
                 || !$this->allowForwardReferences;
 
-            $canFast = true
-                && !$hasNonDefaultFlags
+            $canFast = !$hasNonDefaultFlags
                 && !$typeDef->hasRuntimeConstraints()
                 && $typeDef->getIdFieldIndex() >= 0;
             if ($canFast) {
@@ -539,7 +539,7 @@ class RecordParser
     {
         $isSimple = strpbrk($valuesStr, '"()[]{}') === false;
 
-        $fields = $typeDef?->fields ?? [];
+        $fields = $typeDef !== null ? $typeDef->fields : [];
         $values = [];
 
         if ($isSimple) {
@@ -599,8 +599,8 @@ class RecordParser
             return $this->parseQuotedString($valueStr);
         }
 
-        $typeExpr = $fieldDef?->typeExpr ?? 'str';
-        $baseType = $fieldDef?->baseType ?? $typeExpr;
+        $typeExpr = $fieldDef->typeExpr ?? 'str';
+        $baseType = $fieldDef->baseType ?? $typeExpr;
 
         if ($baseType === 'int') {
             if (ctype_digit($valueStr) || ($valueStr[0] === '-' && ctype_digit(substr($valueStr, 1)))) {
@@ -723,7 +723,8 @@ class RecordParser
             return $valueStr;
         }
 
-        if (true) { // auto number coercion
+        // auto number coercion
+        {
             $fc = $valueStr[0];
             if ($fc >= '0' && $fc <= '9' || $fc === '-') {
                 if (ctype_digit($valueStr) || ($fc === '-' && isset($valueStr[1]) && ctype_digit(substr($valueStr, 1)))) {
@@ -883,13 +884,17 @@ class RecordParser
         return $map;
     }
 
+    /**
+     * @param array<mixed> &$map
+     */
     private function parseMapEntry(
         string        $entryStr,
         array         &$map,
         int           $lineNumber,
         ?MaxiFieldDef $valueFieldDef,
         ?MaxiFieldDef $keyFieldDef,
-    ): void {
+    ): void
+    {
         $colonIndex = -1;
         $depth = 0;
         $inString = false;
@@ -964,7 +969,8 @@ class RecordParser
         ?string $typeExpr,
         string  $fieldName,
         int     $lineNumber,
-    ): void {
+    ): void
+    {
         if ($typeExpr === null) {
             return;
         }
@@ -989,8 +995,7 @@ class RecordParser
                 '>=' => $actual < $limit,
                 '>' => $actual <= $limit,
                 '<=' => $actual > $limit,
-                '<' => $actual >= $limit,
-                default => false,
+                default => $actual >= $limit, // covers '<'
             };
 
             if ($violated) {

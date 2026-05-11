@@ -77,7 +77,6 @@ function parseMaxiAutoAs(string $input, array $classes, array $options = []): Ma
  */
 function dumpMaxiAuto(array $objects, array $options = []): string
 {
-    // Normalise to alias → rows map
     if (array_is_list($objects) && count($objects) > 0) {
         $firstSchema = MaxiSchemaRegistry::get($objects[0]);
         $alias = $firstSchema['alias'] ?? ($options['defaultAlias'] ?? null);
@@ -94,17 +93,17 @@ function dumpMaxiAuto(array $objects, array $options = []): string
         throw new \InvalidArgumentException('dumpMaxiAuto: $objects must be a list or an [alias => instances] map.');
     }
 
+    /** @var array<string, array<string, mixed>> $collectedTypes */
     $collectedTypes = [];
 
     foreach ($dataMap as $rows) {
         foreach ($rows as $obj) {
-            if (is_object($obj) || is_array($obj)) {
+            if (is_object($obj)) {
                 collectSchemasDeep($obj, $collectedTypes);
             }
         }
     }
 
-    // Caller-supplied types win
     if (!empty($options['types'])) {
         $callerTypes = $options['types'];
         if (!is_array($callerTypes)) {
@@ -123,7 +122,6 @@ function dumpMaxiAuto(array $objects, array $options = []): string
         $dumpOptions['types'] = array_values($collectedTypes);
     }
 
-    // Convert object rows to array rows for dumpMaxi
     $arrayDataMap = [];
     foreach ($dataMap as $alias => $rows) {
         $arrayDataMap[$alias] = array_map(
@@ -134,10 +132,6 @@ function dumpMaxiAuto(array $objects, array $options = []): string
 
     return dumpMaxi($arrayDataMap, $dumpOptions);
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Internal hydration helpers
-// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * @param array<string, class-string> $classMap
@@ -160,7 +154,6 @@ function hydrateResult(MaxiParseResult $result, array $classMap): MaxiHydrateRes
         }
     }
 
-    // First pass: construct instances, build instance registry for id-based refs
     /** @var array<string, array<string, object>> alias → id → instance */
     $instanceRegistry = [];
 
@@ -233,11 +226,9 @@ function recordToFieldMap(MaxiRecord $record, mixed $schema): array
  */
 function constructInstance(string $class, array $fieldMap): object
 {
-    // Try passing the whole field-map as a single associative array to the constructor
     try {
         $ref = new \ReflectionClass($class);
 
-        // Try named arguments if constructor accepts corresponding params
         $ctor = $ref->getConstructor();
         if ($ctor !== null) {
             $params = $ctor->getParameters();
@@ -261,7 +252,6 @@ function constructInstance(string $class, array $fieldMap): object
             }
         }
 
-        // No-arg constructor + property assignment (covers data-class patterns)
         $instance = $ref->getConstructor() !== null ? $ref->newInstanceWithoutConstructor() : $ref->newInstance();
         foreach ($fieldMap as $key => $value) {
             if ($ref->hasProperty((string)$key)) {
@@ -275,7 +265,6 @@ function constructInstance(string $class, array $fieldMap): object
         return $instance;
 
     } catch (\Throwable) {
-        // Last resort: create via prototype and assign
         $instance = (new \ReflectionClass($class))->newInstanceWithoutConstructor();
         foreach ($fieldMap as $key => $value) {
             $instance->{$key} = $value;
@@ -299,7 +288,6 @@ function findIdField(mixed $schema): ?string
         return $schema->getIdentifierFieldName();
     }
 
-    // Plain-array descriptor from registry
     $fields = $schema['fields'] ?? [];
     foreach ($fields as $f) {
         $constraints = is_array($f) ? ($f['constraints'] ?? []) : [];
@@ -363,12 +351,7 @@ function resolveHydratedReferences(
                 }
 
                 // Get current value from instance
-                $currentVal = null;
-                try {
-                    $currentVal = isset($instance->{$fieldName}) ? $instance->{$fieldName} : null;
-                } catch (\Throwable) {
-                    continue;
-                }
+                $currentVal = isset($instance->{$fieldName}) ? $instance->{$fieldName} : null;
 
                 // Only replace scalar id references (not already-resolved objects)
                 if ($currentVal === null || is_object($currentVal) || is_array($currentVal)) {
@@ -395,6 +378,9 @@ function resolveHydratedReferences(
     }
 }
 
+/**
+ * @param string[] $nonRef
+ */
 function getRefAlias(string $typeExpr, MaxiSchema $parsedSchema, array $nonRef): ?string
 {
     $t = trim(preg_replace('/(\[\])+$/', '', $typeExpr));
@@ -410,12 +396,8 @@ function getRefAlias(string $typeExpr, MaxiSchema $parsedSchema, array $nonRef):
     if ($parsedSchema->hasType($t)) {
         return $t;
     }
-    return ($parsedSchema->nameToAlias ?? [])[$t] ?? null;
+    return ($parsedSchema->nameToAlias)[$t] ?? null;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Auto-dump schema collection helper
-// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * @param object|array<string,mixed> $obj
