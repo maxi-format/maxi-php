@@ -236,7 +236,7 @@ try {
 
 ### Parser behavior options
 
-By default the parser **warns** on type mismatches, missing fields, and constraint violations instead of throwing. Tune this per option:
+By default, the parser **warns** on type mismatches, missing fields, and constraint violations instead of throwing. Tune this per option:
 
 ```php
 // Warn on type mismatches (default)

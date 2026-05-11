@@ -1,0 +1,33 @@
+name: Update Packagist
+
+on:
+  push:
+    branches:
+      - main
+  release:
+    types: [published]
+  create:
+    tags:
+      - '*'
+
+jobs:
+  update-packagist:
+    runs-on: ubuntu-latest
+    name: Notify Packagist of Update
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Validate composer.json
+        run: |
+          if [ ! -f composer.json ]; then
+            echo "composer.json not found!"
+            exit 1
+          fi
+
+      - name: Notify Packagist
+        run: |
+          curl -XPOST -H 'content-type:application/json' \
+            "https://packagist.org/api/update-packages?username=${{ secrets.PACKAGIST_USERNAME }}&apiToken=${{ secrets.PACKAGIST_TOKEN }}" \
+            -d '{"repository":{"url":"https://github.com/${{ github.repository }}"}}'
