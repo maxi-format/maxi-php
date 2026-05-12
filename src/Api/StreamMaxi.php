@@ -93,7 +93,6 @@ class MaxiStreamResult implements \IteratorAggregate
  */
 function streamMaxi(mixed $input, array $options = []): MaxiStreamResult
 {
-    // Normalise resource → string
     if (is_resource($input)) {
         $content = stream_get_contents($input);
         if ($content === false) {
@@ -146,7 +145,6 @@ function generateRecords(string $recordsText, MaxiParseResult $result, array $op
             continue;
         }
 
-        // Comment — skip to end of line
         if ($ch === '#') {
             while ($i < $len && $text[$i] !== "\n") {
                 $i++;
@@ -160,7 +158,6 @@ function generateRecords(string $recordsText, MaxiParseResult $result, array $op
             continue;
         }
 
-        // Read alias
         $aliasStart = $i;
         $i++;
         while ($i < $len) {
@@ -174,7 +171,6 @@ function generateRecords(string $recordsText, MaxiParseResult $result, array $op
         }
         $alias = substr($text, $aliasStart, $i - $aliasStart);
 
-        // Skip whitespace between alias and '('
         while ($i < $len && ($text[$i] === ' ' || $text[$i] === "\t" || $text[$i] === "\r")) {
             $i++;
         }
@@ -184,7 +180,7 @@ function generateRecords(string $recordsText, MaxiParseResult $result, array $op
         }
 
         $recordLine = $lineNumber;
-        $i++;                   // skip '('
+        $i++;
         $valuesStart = $i;
 
         $parenDepth = 1;

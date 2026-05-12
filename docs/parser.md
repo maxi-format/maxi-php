@@ -533,7 +533,7 @@ MAXI;
 try {
     Maxi::parse($input, ['allowAdditionalFields' => 'error']);
 } catch (MaxiException $e) {
-    echo $e->errorCode; // 'E006' (SchemaMismatchError)
+    echo $e->errorCode; // 'E401' (SchemaMismatchError)
 }
 ```
 
@@ -557,4 +557,40 @@ MaxiSchemaRegistry::define(ExternalProduct::class, [
 
 $result = Maxi::parseAutoAs($maxi, [ExternalProduct::class]);
 echo $result->data['P'][0] instanceof ExternalProduct; // true
+```
+
+---
+
+### 10. Enum value aliases
+
+Enum fields may use short aliases as wire tokens. The parser always returns the full semantic value.
+
+```php
+use Maxi\Maxi;
+
+$input = <<<MAXI
+U:User(id:int|name|role:enum[a:admin,e:editor,v:viewer])
+###
+U(1|Alice|a)
+U(2|Bob|v)
+MAXI;
+
+$result = Maxi::parse($input);
+
+echo $result->records[0]->values[2]; // 'admin': alias 'a' expanded
+echo $result->records[1]->values[2]; // 'viewer': alias 'v' expanded
+```
+
+`enum<int>` aliases work the same way — the parsed value is always the integer:
+
+```php
+$input = <<<MAXI
+D:Device(id:int|name|state:enum<int>[O:900,I:910,R:1000,E:999])
+###
+D(1|sensor-A|R)
+MAXI;
+
+$result = Maxi::parse($input);
+
+echo $result->records[0]->values[2]; // 1000: alias 'R' expanded to int
 ```

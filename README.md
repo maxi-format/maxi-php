@@ -203,7 +203,7 @@ use Maxi\Core\MaxiException;
 try {
     Maxi::parse($input, ['allowTypeCoercion' => 'error']);
 } catch (MaxiException $e) {
-    echo $e->errorCode;    // e.g. 'E007'
+    echo $e->errorCode;    // e.g. 'E402'
     echo $e->maxiLine;     // line number where the error occurred
     echo $e->maxiFilename; // filename (if provided via options)
     echo $e->getMessage(); // human-readable description
@@ -214,25 +214,27 @@ try {
 
 | Code | Name                         | Description                      |
 |------|------------------------------|----------------------------------|
-| E001 | UnsupportedVersionError      | `@version` value not supported   |
-| E002 | DuplicateTypeError           | Duplicate type alias in schema   |
-| E003 | UnknownTypeError             | Record uses undefined type alias |
-| E005 | InvalidSyntaxError           | General syntax error             |
-| E006 | SchemaMismatchError          | Too many values for type fields  |
-| E007 | TypeMismatchError            | Value doesn't match field type   |
-| E008 | ConstraintViolationError     | Value violates a constraint      |
-| E009 | UnresolvedReferenceError     | Reference ID not found           |
-| E010 | CircularInheritanceError     | Circular type inheritance        |
-| E011 | MissingRequiredFieldError    | Required field is null/missing   |
-| E012 | InvalidConstraintValueError  | Invalid constraint value         |
-| E013 | UndefinedParentError         | Parent type not defined          |
-| E014 | ConstraintSyntaxError        | Malformed constraint             |
-| E015 | ArraySyntaxError             | Malformed array literal          |
-| E016 | DuplicateIdentifierError     | Duplicate id in records          |
-| E017 | UnsupportedBinaryFormatError | Invalid bytes annotation         |
-| E018 | InvalidDefaultValueError     | Default value type mismatch      |
-| E019 | StreamError                  | Error during streaming parse     |
-| E020 | SchemaLoadError              | Error loading external schema    |
+| E101 | InvalidSyntaxError           | General syntax error             |
+| E102 | DuplicateTypeError           | Duplicate type alias in schema   |
+| E103 | UnknownDirectiveError        | Unrecognised `@directive`        |
+| E201 | UnknownTypeError             | Record uses undefined type alias |
+| E202 | UndefinedParentError         | Parent type not defined          |
+| E203 | CircularInheritanceError     | Circular type inheritance        |
+| E204 | UnresolvedReferenceError     | Reference ID not found           |
+| E205 | DuplicateIdentifierError     | Duplicate id in records          |
+| E301 | ConstraintSyntaxError        | Malformed constraint             |
+| E302 | InvalidConstraintValueError  | Invalid constraint value         |
+| E303 | ConstraintViolationError     | Value violates a constraint      |
+| E304 | ArraySyntaxError             | Malformed array literal          |
+| E401 | SchemaMismatchError          | Too many/few values for type     |
+| E402 | TypeMismatchError            | Value doesn't match field type   |
+| E403 | MissingRequiredFieldError    | Required field is null/missing   |
+| E404 | InvalidDefaultValueError     | Default value type mismatch      |
+| E405 | UnsupportedBinaryFormatError | Invalid bytes annotation         |
+| E501 | EnumAliasError               | Duplicate or ambiguous enum alias|
+| E601 | UnsupportedVersionError      | `@version` value not supported   |
+| E602 | SchemaLoadError              | Error loading external schema    |
+| E603 | StreamError                  | Error during streaming parse     |
 
 ### Parser behavior options
 

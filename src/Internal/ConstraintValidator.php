@@ -36,6 +36,7 @@ class ConstraintValidator
             foreach ($typeDef->fields as $field) {
                 self::validateAnnotationTypeCompat($field, $alias, $filename);
                 self::validateConstraintConflicts($field, $alias, $filename);
+                self::validateEnumAliases($field, $alias, $filename);
             }
         }
     }
@@ -302,8 +303,8 @@ class ConstraintValidator
         }
 
         $strValue = (string)$value;
-        if (!in_array($strValue, $enumInfo['values'], true)) {
-            $joined = implode(',', $enumInfo['values']);
+        if (!array_key_exists($strValue, $enumInfo['aliasMap'])) {
+            $joined = implode(',', array_keys($enumInfo['aliasMap']));
             $msg = "Value '{$strValue}' not in enum [{$joined}] for field '{$fieldName}'";
 
             if ($isStrict) {
@@ -313,7 +314,90 @@ class ConstraintValidator
         }
     }
 
-    /** @return array{baseType:string,values:string[]}|null */
+    /**
+     * Validate enum alias uniqueness rules (E501).
+     * - No duplicate aliases
+     * - No duplicate full values
+     * - Alias must not equal another entry's full value string
+     */
+    private static function validateEnumAliases(MaxiFieldDef $field, string $typeAlias, ?string $filename): void
+    {
+        if ($field->typeExpr === null || !str_starts_with($field->typeExpr, 'enum')) {
+            return;
+        }
+        if (!preg_match('/^enum(?:<(\w+)>)?\[([^\]]*)\]$/', $field->typeExpr, $m)) {
+            return;
+        }
+
+        $tokens = array_values(array_filter(array_map('trim', explode(',', $m[2])), fn($v) => $v !== ''));
+        $seenAliases = [];
+        $seenFullValues = [];
+
+        foreach ($tokens as $token) {
+            if (str_contains($token, ':')) {
+                $colonPos = strpos($token, ':');
+                $alias = substr($token, 0, $colonPos);
+                $fullStr = substr($token, $colonPos + 1);
+            } else {
+                $alias = $token;
+                $fullStr = $token;
+            }
+
+            if (isset($seenAliases[$alias])) {
+                throw new MaxiException(
+                    "Duplicate enum alias '{$alias}' in field '{$field->name}' of type '{$typeAlias}'",
+                    MaxiErrorCode::EnumAliasError,
+                    null,
+                    null,
+                    $filename,
+                );
+            }
+            $seenAliases[$alias] = true;
+
+            if (isset($seenFullValues[$fullStr])) {
+                throw new MaxiException(
+                    "Duplicate enum value '{$fullStr}' in field '{$field->name}' of type '{$typeAlias}'",
+                    MaxiErrorCode::EnumAliasError,
+                    null,
+                    null,
+                    $filename,
+                );
+            }
+            $seenFullValues[$fullStr] = true;
+
+            if ($alias !== $fullStr && isset($seenFullValues[$alias])) {
+                throw new MaxiException(
+                    "Enum alias '{$alias}' conflicts with another entry's full value in field '{$field->name}' of type '{$typeAlias}'",
+                    MaxiErrorCode::EnumAliasError,
+                    null,
+                    null,
+                    $filename,
+                );
+            }
+        }
+
+        foreach ($tokens as $token) {
+            if (str_contains($token, ':')) {
+                $colonPos = strpos($token, ':');
+                $alias = substr($token, 0, $colonPos);
+                $fullStr = substr($token, $colonPos + 1);
+            } else {
+                $alias = $token;
+                $fullStr = $token;
+            }
+            if ($alias !== $fullStr && isset($seenAliases[$fullStr])) {
+                throw new MaxiException(
+                    "Enum value '{$fullStr}' conflicts with another entry's alias in field '{$field->name}' of type '{$typeAlias}'",
+                    MaxiErrorCode::EnumAliasError,
+                    null,
+                    null,
+                    $filename,
+                );
+            }
+        }
+    }
+
+    /** @return array{baseType:string,aliasMap:array<string,mixed>}|null */
     private static function parseEnumTypeExpr(string $typeExpr): ?array
     {
         $t = trim($typeExpr);
@@ -326,12 +410,26 @@ class ConstraintValidator
         }
 
         $baseType = $m[1] !== '' ? $m[1] : 'str';
-        $values = array_values(array_filter(
-            array_map('trim', explode(',', $m[2])),
-            fn($v) => $v !== '',
-        ));
+        $tokens = array_values(array_filter(array_map('trim', explode(',', $m[2])), fn($v) => $v !== ''));
 
-        return ['baseType' => $baseType, 'values' => $values];
+        $aliasMap = [];
+        foreach ($tokens as $token) {
+            if (str_contains($token, ':')) {
+                $colonPos = strpos($token, ':');
+                $alias = substr($token, 0, $colonPos);
+                $fullStr = substr($token, $colonPos + 1);
+            } else {
+                $alias = $token;
+                $fullStr = $token;
+            }
+            $fullVal = ($baseType === 'int') ? (int)$fullStr : $fullStr;
+            $aliasMap[$alias] = $fullVal;
+            if ($alias !== $fullStr) {
+                $aliasMap[$fullStr] = $fullVal;
+            }
+        }
+
+        return ['baseType' => $baseType, 'aliasMap' => $aliasMap];
     }
 
     public static function getBaseTypeName(?string $typeExpr): ?string

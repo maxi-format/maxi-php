@@ -88,7 +88,8 @@ function dumpFromParseResult(MaxiParseResult $result, array $options): string
     }
 
     foreach ($result->records as $record) {
-        $out[] = dumpRecord($record, $multiline);
+        $typeDef = $result->schema->types[$record->alias] ?? null;
+        $out[] = dumpRecord($record, $multiline, $typeDef);
     }
 
     return implode("\n", $out);
@@ -564,9 +565,14 @@ function dumpConstraintRaw(mixed $c): string
 }
 
 /** Dump a MaxiRecord (from a parsed result). */
-function dumpRecord(MaxiRecord $record, bool $multiline): string
+function dumpRecord(MaxiRecord $record, bool $multiline, ?MaxiTypeDef $typeDef = null): string
 {
-    $values = array_map(fn($v) => dumpValue($v, null, [], []), $record->values);
+    $fields = $typeDef !== null ? $typeDef->fields : [];
+    $values = [];
+    foreach ($record->values as $i => $v) {
+        $fieldInfo = isset($fields[$i]) ? ['typeExpr' => $fields[$i]->typeExpr] : null;
+        $values[] = dumpValue($v, $fieldInfo, [], []);
+    }
 
     if (!$multiline) {
         return "{$record->alias}(" . implode('|', $values) . ')';
@@ -627,6 +633,36 @@ function dumpObjectAsRecord(
 }
 
 /**
+ * For enum fields with aliases, return the wire token (alias) for the given full value string.
+ * Accepts both full value and alias as input, always returns the alias wire token.
+ * Returns null if typeExpr is not an enum or the value has no alias.
+ */
+function getEnumWireToken(string $typeExpr, string $fullValueStr): ?string
+{
+    if (!preg_match('/^enum(?:<(\w+)>)?\[([^\]]*)\]$/', $typeExpr, $m)) {
+        return null;
+    }
+    $baseType = $m[1] !== '' ? $m[1] : 'str';
+    $tokens = array_values(array_filter(array_map('trim', explode(',', $m[2])), fn($v) => $v !== ''));
+
+    foreach ($tokens as $token) {
+        if (str_contains($token, ':')) {
+            $colonPos = strpos($token, ':');
+            $alias = substr($token, 0, $colonPos);
+            $fullStr = substr($token, $colonPos + 1);
+        } else {
+            $alias = $token;
+            $fullStr = $token;
+        }
+        $fullVal = ($baseType === 'int') ? (int)$fullStr : $fullStr;
+        if ($fullValueStr === $fullStr || $fullValueStr === $alias || $fullValueStr === (string)$fullVal) {
+            return $alias;
+        }
+    }
+    return null;
+}
+
+/**
  * Serialise a single PHP value to its MAXI string representation.
  *
  * @param mixed $value
@@ -641,6 +677,13 @@ function dumpValue(mixed $value, mixed $fieldInfo, array $allTypes, array $optio
     }
 
     if (is_string($value)) {
+        $typeExpr = $fieldInfo['typeExpr'] ?? null;
+        if ($typeExpr !== null && str_starts_with($typeExpr, 'enum')) {
+            $wireToken = getEnumWireToken($typeExpr, $value);
+            if ($wireToken !== null) {
+                return $wireToken;
+            }
+        }
         if ($value === '' || $value === '~' || $value[0] <= ' ' || $value[-1] <= ' ' || strpbrk($value, '|()[]{}~,:\\"') !== false) {
             return '"' . escapeString($value) . '"';
         }
@@ -652,6 +695,13 @@ function dumpValue(mixed $value, mixed $fieldInfo, array $allTypes, array $optio
     }
 
     if (is_int($value) || is_float($value)) {
+        $typeExpr = $fieldInfo['typeExpr'] ?? null;
+        if ($typeExpr !== null && str_starts_with($typeExpr, 'enum')) {
+            $wireToken = getEnumWireToken($typeExpr, (string)$value);
+            if ($wireToken !== null) {
+                return $wireToken;
+            }
+        }
         return (string)$value;
     }
 

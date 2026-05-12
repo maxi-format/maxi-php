@@ -140,7 +140,6 @@ function hydrateResult(MaxiParseResult $result, array $classMap): MaxiHydrateRes
 {
     $hydrateResult = new MaxiHydrateResult($result->schema);
 
-    // Build schema-by-alias map: prefer parsed schema, fall back to registry descriptor
     $schemaByAlias = [];
     foreach ($classMap as $alias => $class) {
         $parsed = $result->schema->getType($alias);
@@ -178,7 +177,6 @@ function hydrateResult(MaxiParseResult $result, array $classMap): MaxiHydrateRes
         }
     }
 
-    // Second pass: resolve scalar id-references to actual instances
     resolveHydratedReferences($hydrateResult->data, $schemaByAlias, $instanceRegistry, $result->schema);
 
     foreach ($result->warnings as $w) {
@@ -350,10 +348,8 @@ function resolveHydratedReferences(
                     continue;
                 }
 
-                // Get current value from instance
                 $currentVal = isset($instance->{$fieldName}) ? $instance->{$fieldName} : null;
 
-                // Only replace scalar id references (not already-resolved objects)
                 if ($currentVal === null || is_object($currentVal) || is_array($currentVal)) {
                     continue;
                 }

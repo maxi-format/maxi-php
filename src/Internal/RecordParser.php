@@ -382,17 +382,19 @@ class RecordParser
             $finalValues[$idx] = $value;
         }
 
-        $enumCache = $typeDef->getEnumValuesCache() ?? [];
-        foreach ($enumCache as $idx => $enumVals) {
-            if ($enumVals === null) {
+        $enumCache = $typeDef->getEnumAliasMapsCache() ?? [];
+        foreach ($enumCache as $idx => $aliasMap) {
+            if ($aliasMap === null) {
                 continue;
             }
             $value = $finalValues[$idx] ?? null;
             if ($value !== null) {
                 $strValue = is_string($value) ? $value : (string)$value;
-                if (!isset($enumVals[$strValue])) {
+                if (array_key_exists($strValue, $aliasMap)) {
+                    $finalValues[$idx] = $aliasMap[$strValue];
+                } else {
                     $fieldName = $typeDef->fields[$idx]->name;
-                    $enumList = implode(',', array_keys($enumVals));
+                    $enumList = implode(',', array_keys($aliasMap));
                     $msg = "Value '{$strValue}' not in enum [{$enumList}] for field '{$fieldName}'";
                     if ($this->allowConstraintViolations === 'error') {
                         throw new MaxiException($msg, MaxiErrorCode::ConstraintViolationError, $lineNumber, null, $this->filename);
@@ -513,15 +515,17 @@ class RecordParser
             }
         }
 
-        $enumCache = $typeDef->getEnumValuesCache() ?? [];
-        foreach ($enumCache as $idx => $enumVals) {
-            if ($enumVals === null) continue;
+        $enumCache = $typeDef->getEnumAliasMapsCache() ?? [];
+        foreach ($enumCache as $idx => $aliasMap) {
+            if ($aliasMap === null) continue;
             $value = $values[$idx] ?? null;
             if ($value !== null) {
                 $strValue = is_string($value) ? $value : (string)$value;
-                if (!isset($enumVals[$strValue])) {
+                if (array_key_exists($strValue, $aliasMap)) {
+                    $values[$idx] = $aliasMap[$strValue];
+                } else {
                     $fieldName = $fields[$idx]->name;
-                    $enumList = implode(',', array_keys($enumVals));
+                    $enumList = implode(',', array_keys($aliasMap));
                     $this->result->addWarning(
                         "Value '{$strValue}' not in enum [{$enumList}] for field '{$fieldName}'",
                         MaxiErrorCode::ConstraintViolationError,

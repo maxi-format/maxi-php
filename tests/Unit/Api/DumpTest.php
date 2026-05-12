@@ -103,4 +103,36 @@ class DumpTest extends TestCase
         $this->assertStringContainsString('Main St', $dumped);
         $this->assertStringContainsString('Anytown', $dumped);
     }
+
+    public function testDumpEnumFullValueEmitsAlias(): void
+    {
+        $input = "U:User(id:int|role:enum[a:admin,e:editor])\n###\nU(1|a)";
+        $result = parseMaxi($input);
+        $dumped = dumpMaxi($result);
+        $this->assertStringContainsString('U(1|a)', $dumped);
+    }
+
+    public function testDumpEnumAliasInputEmitsAlias(): void
+    {
+        $input = "U:User(id:int|role:enum[a:admin,e:editor])\n###\nU(1|a)";
+        $result = parseMaxi($input);
+        $dumped = dumpMaxi($result);
+        $this->assertStringContainsString('U(1|a)', $dumped);
+    }
+
+    public function testDumpEnumNoAliasUnchanged(): void
+    {
+        $input = "U:User(id:int|role:enum[admin,editor])\n###\nU(1|admin)";
+        $result = parseMaxi($input);
+        $dumped = dumpMaxi($result);
+        $this->assertStringContainsString('U(1|admin)', $dumped);
+    }
+
+    public function testDumpEnumIntAlias(): void
+    {
+        $input = "U:User(id:int|state:enum<int>[O:900,I:910])\n###\nU(1|O)";
+        $result = parseMaxi($input);
+        $dumped = dumpMaxi($result);
+        $this->assertStringContainsString('U(1|O)', $dumped);
+    }
 }

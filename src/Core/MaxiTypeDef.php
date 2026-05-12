@@ -20,6 +20,8 @@ class MaxiTypeDef
     private ?array $requiredFlags = null;
     /** @var (string[]|null)[]|null */
     private ?array $enumValues = null;
+    /** @var (array<string,mixed>|null)[]|null */
+    private ?array $enumAliasMaps = null;
     private bool $hasRuntimeConstraints = false;
 
     /**
@@ -47,6 +49,7 @@ class MaxiTypeDef
         $this->idFieldIndex = -2;
         $this->requiredFlags = null;
         $this->enumValues = null;
+        $this->enumAliasMaps = null;
     }
 
     private function ensureCache(): void
@@ -89,10 +92,12 @@ class MaxiTypeDef
         }
 
         $this->enumValues = array_fill(0, $len, null);
+        $this->enumAliasMaps = array_fill(0, $len, null);
         $this->hasRuntimeConstraints = false;
         foreach ($this->fields as $i => $f) {
-            $ev = $f->getEnumValues();
-            $this->enumValues[$i] = $ev !== null ? array_flip($ev) : null;
+            $am = $f->getEnumAliasMap();
+            $this->enumAliasMaps[$i] = $am;
+            $this->enumValues[$i] = $am !== null ? array_flip(array_map('strval', $am)) : null;
 
             foreach ($f->constraints ?? [] as $c) {
                 if (in_array($c->type, ['comparison', 'pattern', 'exact-length'], true)) {
@@ -137,5 +142,12 @@ class MaxiTypeDef
     {
         $this->ensureCache();
         return $this->enumValues;
+    }
+
+    /** @return (array<string,mixed>|null)[]|null */
+    public function getEnumAliasMapsCache(): ?array
+    {
+        $this->ensureCache();
+        return $this->enumAliasMaps;
     }
 }

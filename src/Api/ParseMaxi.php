@@ -39,7 +39,7 @@ function parseMaxi(string $input, array $options = []): MaxiParseResult
     if (count($result->records) > 0 && count($result->schema->types) > 0) {
         if (hasReferenceFields($result)) {
             $registry = ReferenceResolver::buildObjectRegistry($result);
-            $result->objectRegistry = $registry;   // store for hydration step
+            $result->objectRegistry = $registry;
             ReferenceResolver::validateReferences($result, $registry, $options['filename'] ?? null, $options);
         }
     }
@@ -52,7 +52,6 @@ function parseMaxi(string $input, array $options = []): MaxiParseResult
  */
 function splitSections(string $input): array
 {
-    // Look for  ###  separator line
     if (preg_match('/^[ \t]*###[ \t]*(?:\r?\n|$)/m', $input, $m, PREG_OFFSET_CAPTURE)) {
         $sepOffset = $m[0][1];
         $schemaSection = trim(substr($input, 0, $sepOffset));
@@ -65,7 +64,6 @@ function splitSections(string $input): array
     $hasInheritanceType = (bool)preg_match('/^[ \t]*[A-Za-z_][A-Za-z0-9_-]*[ \t]*<[^>]+>[ \t]*\(/m', $input);
 
     if ($hasDirective || $hasExplicitTypeDef || $hasInheritanceType) {
-        // Only-directives heuristic: split directives → schema, rest → records
         if ($hasDirective && !$hasExplicitTypeDef && !$hasInheritanceType) {
             $schemaLines = [];
             $recordLines = [];

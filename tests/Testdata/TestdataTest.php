@@ -56,24 +56,16 @@ class TestdataTest extends TestCase
         return $cases;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Main test method
-    // ─────────────────────────────────────────────────────────────────────────
-
     #[DataProvider('caseProvider')]
     public function testCase(string $dir, array $meta, array $expected, string $input): void
     {
         $expectSuccess = $expected['success'] ?? ($meta['category'] === 'valid');
 
-        // Parser-dependent error tests: our parser supports forward references,
-        // so tests that expect E009 for forward refs should pass as success instead.
         if (($meta['parser_dependent'] ?? false) && !$expectSuccess) {
             $expectSuccess = true;
         }
 
-        // Build a loadSchema callback that resolves relative paths from the test-case dir
         $loadSchema = function (string $path) use ($dir): string {
-            // Try relative to the test-case folder first, then testdata root
             $local = $dir . '/' . $path;
             if (is_file($local)) {
                 return file_get_contents($local);
@@ -85,7 +77,6 @@ class TestdataTest extends TestCase
         $options = array_merge($parserOptions, ['loadSchema' => $loadSchema]);
 
         if (!$expectSuccess) {
-            // ── Error cases ───────────────────────────────────────────────
             $expectedCode = $expected['error_code'] ?? null;
             $expectedCodeOneOf = $expected['error_code_one_of'] ?? null;
             try {
@@ -115,7 +106,6 @@ class TestdataTest extends TestCase
             return;
         }
 
-        // ── Success cases ─────────────────────────────────────────────────
         try {
             $result = parseMaxi($input, $options);
         } catch (MaxiException $e) {
@@ -124,7 +114,6 @@ class TestdataTest extends TestCase
 
         $this->assertNotNull($result, 'parseMaxi should return a non-null result');
 
-        // Check expected warnings if present
         $expectedWarnings = $expected['warnings'] ?? [];
         foreach ($expectedWarnings as $w) {
             $wCode = is_array($w) ? ($w[0] ?? null) : null;
@@ -134,14 +123,13 @@ class TestdataTest extends TestCase
             }
         }
 
-        // record_validations
         foreach ($expected['record_validations'] ?? [] as $validation) {
             $path = $validation['path'] ?? null;
             $expectedValue = $validation['expected_value'] ?? null;
             $description = $validation['description'] ?? $path;
 
             if ($path === null || !str_starts_with($path, '#/records/')) {
-                continue; // skip unsupported paths (#/schema/, etc.)
+                continue;
             }
 
             $actual = self::resolveJsonPath($path, $result);
@@ -152,7 +140,6 @@ class TestdataTest extends TestCase
             );
         }
 
-        // object_validations
         foreach ($expected['object_validations'] ?? [] as $validation) {
             $path = $validation['path'] ?? null;
             $expectedValue = $validation['expected_value'] ?? null;
@@ -163,7 +150,6 @@ class TestdataTest extends TestCase
                 continue;
             }
 
-            // Skip follow_ref validations (require hydration)
             if ($followRef) {
                 continue;
             }
@@ -176,7 +162,6 @@ class TestdataTest extends TestCase
             );
         }
 
-        // Record count / type check
         if (isset($expected['records'])) {
             $this->assertCount(
                 count($expected['records']),
@@ -185,7 +170,6 @@ class TestdataTest extends TestCase
             );
             foreach ($expected['records'] as $i => $rec) {
                 if (isset($rec['type'])) {
-                    // expected.json may use type NAME (e.g. "User") or alias (e.g. "U")
                     $expectedType = $rec['type'];
                     $actualAlias = $result->records[$i]->alias;
                     $typeDef = $result->schema->getType($actualAlias);
@@ -207,25 +191,21 @@ class TestdataTest extends TestCase
         $root = array_shift($segments);
 
         if ($root === 'records') {
-            // #/records/{index}/value/{fieldName}[/{subField}]
-            // #/records/{index}/type
             $index = (int)array_shift($segments);
             $record = $result->records[$index] ?? null;
             if ($record === null) {
                 return null;
             }
 
-            $nextSeg = array_shift($segments); // 'value' or 'type'
+            $nextSeg = array_shift($segments);
 
             if ($nextSeg === 'type') {
                 $typeDef = $result->schema?->getType($record->alias);
                 return $typeDef?->name ?? $record->alias;
             }
 
-            // nextSeg === 'value'
             $fieldName = array_shift($segments);
             if ($fieldName === null) {
-                // return the entire value array, keyed by field name if schema available
                 $typeDef = $result->schema?->getType($record->alias);
                 if ($typeDef !== null && count($typeDef->fields) === count($record->values)) {
                     $assoc = [];
@@ -240,14 +220,12 @@ class TestdataTest extends TestCase
             $typeDef = $result->schema?->getType($record->alias);
             if ($typeDef !== null) {
                 foreach ($typeDef->fields as $i => $field) {
-                    // Match by exact name or by name_annotation (e.g. data_hex for data:bytes@hex)
                     $nameMatches = $field->name === $fieldName;
                     if (!$nameMatches && $field->annotation !== null) {
                         $nameMatches = ($field->name . '_' . $field->annotation) === $fieldName;
                     }
                     if ($nameMatches) {
                         $value = $record->values[$i] ?? null;
-                        // Traverse remaining sub-keys into array/map value
                         while (!empty($segments) && is_array($value)) {
                             $subKey = array_shift($segments);
                             $value = $value[$subKey] ?? ($value[(int)$subKey] ?? null);
@@ -257,7 +235,6 @@ class TestdataTest extends TestCase
                 }
             }
 
-            // No schema — try positional/raw values
             if ($fieldName === 'values' && is_array($record->values)) {
                 $value = $record->values;
                 while (!empty($segments) && is_array($value)) {
@@ -271,7 +248,6 @@ class TestdataTest extends TestCase
         }
 
         if ($root === 'objects') {
-            // #/objects/{TypeNameOrAlias}/{id}/{fieldName}
             $typeAlias = array_shift($segments);
             $idValue = array_shift($segments);
             $fieldName = array_shift($segments);
@@ -280,20 +256,16 @@ class TestdataTest extends TestCase
                 return null;
             }
 
-            // Resolve type name → alias
             $typeDef = $result->schema->getType($typeAlias);
             if ($typeDef === null) {
                 return null;
             }
 
-            // #/objects/TypeAlias/{id} — return full object or check existence
             if ($idValue !== null && $fieldName === null) {
-                // Check object registry first
                 $registryObj = $result->objectRegistry[$typeDef->alias][(string)$idValue] ?? null;
                 if ($registryObj !== null) {
                     return $registryObj;
                 }
-                // Fallback: iterate records
                 $idField = $typeDef->getIdField();
                 if ($idField === null) {
                     return null;
@@ -305,7 +277,6 @@ class TestdataTest extends TestCase
                     }
                     $recId = $idIdx !== false ? ($record->values[$idIdx] ?? null) : null;
                     if ((string)$recId === (string)$idValue) {
-                        // Return field-name-keyed associative array
                         $vals = [];
                         foreach ($typeDef->fields as $fi => $field) {
                             $vals[$field->name] = $record->values[$fi] ?? null;
@@ -320,11 +291,9 @@ class TestdataTest extends TestCase
                 return null;
             }
 
-            // Try object registry first (has inline objects replaced with IDs)
             $registryAlias = $typeDef->alias;
             $registryObj = $result->objectRegistry[$registryAlias][(string)$idValue] ?? null;
             if ($registryObj !== null && is_array($registryObj)) {
-                // Try fieldName directly, then with annotation suffix
                 $resolvedFieldName = $fieldName;
                 if (!array_key_exists($fieldName, $registryObj)) {
                     foreach ($typeDef->fields as $field) {
@@ -344,7 +313,6 @@ class TestdataTest extends TestCase
                 }
             }
 
-            // Fallback: iterate records
             $idField = $typeDef->getIdField();
             if ($idField === null) {
                 return null;
@@ -376,7 +344,7 @@ class TestdataTest extends TestCase
             return null;
         }
 
-        return null; // #/schema/ paths not supported at this level
+        return null;
     }
 
     private static function findTestdataRoot(): ?string
@@ -384,10 +352,6 @@ class TestdataTest extends TestCase
         $composerPath = __DIR__ . '/../../vendor/maxi-format/maxi-testdata/testdata';
         if (is_dir($composerPath)) {
             return realpath($composerPath);
-        }
-        $sibling = __DIR__ . '/../../../maxi-testdata/testdata';
-        if (is_dir($sibling)) {
-            return realpath($sibling);
         }
 
         return null;
