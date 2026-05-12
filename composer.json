@@ -15,7 +15,7 @@
         "php": ">=8.0"
     },
     "require-dev": {
-        "maxi-format/maxi-testdata": "0.2.0",
+        "maxi-format/maxi-testdata": "0.3.0",
         "phpstan/phpstan": "^2.1",
         "phpunit/phpunit": "^10"
     },
@@ -40,11 +40,11 @@
             "type": "package",
             "package": {
                 "name": "maxi-format/maxi-testdata",
-                "version": "0.2.0",
+                "version": "0.3.0",
                 "source": {
                     "type": "git",
                     "url": "https://github.com/maxi-format/maxi-testdata.git",
-                    "reference": "0.2.0"
+                    "reference": "0.3.0"
                 }
             }
         }

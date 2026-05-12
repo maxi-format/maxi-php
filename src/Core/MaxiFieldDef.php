@@ -90,9 +90,55 @@ class MaxiFieldDef
             if (str_starts_with($t, '"') && str_ends_with($t, '"')) {
                 $t = substr($t, 1, -1);
             }
+            if (str_contains($t, ':')) {
+                $colonPos = strpos($t, ':');
+                $t = substr($t, $colonPos + 1);
+            }
             $values[] = $t;
         }
         return $values;
+    }
+
+    /**
+     * Returns a map of wire-token => semantic-value for enum fields.
+     * Both alias and full-value-string are keys (backward compat).
+     * For enum<int> the semantic value is an int.
+     * Returns null if not an enum field.
+     * @return array<string, mixed>|null
+     */
+    public function getEnumAliasMap(): ?array
+    {
+        if ($this->typeExpr === null || !str_starts_with($this->typeExpr, 'enum')) {
+            return null;
+        }
+        if (!preg_match('/^enum(?:<(\w+)>)?\[([^\]]*)\]$/', $this->typeExpr, $m)) {
+            return null;
+        }
+        $baseType = ($m[1] !== '') ? $m[1] : 'str';
+        $map = [];
+        foreach (explode(',', $m[2]) as $v) {
+            $t = trim($v);
+            if ($t === '') {
+                continue;
+            }
+            if (str_starts_with($t, '"') && str_ends_with($t, '"')) {
+                $t = substr($t, 1, -1);
+            }
+            if (str_contains($t, ':')) {
+                $colonPos = strpos($t, ':');
+                $alias = substr($t, 0, $colonPos);
+                $fullStr = substr($t, $colonPos + 1);
+            } else {
+                $alias = $t;
+                $fullStr = $t;
+            }
+            $fullVal = ($baseType === 'int') ? (int)$fullStr : $fullStr;
+            $map[$alias] = $fullVal;
+            if ($alias !== $fullStr) {
+                $map[$fullStr] = $fullVal;
+            }
+        }
+        return $map;
     }
 }
 
